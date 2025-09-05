@@ -1,4 +1,7 @@
 import { defineConfig } from "cypress";
+import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
+import addCucumberPreprocessorPlugin from "@badeball/cypress-cucumber-preprocessor";
+import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esbuild";
 
 export default defineConfig({
   defaultCommandTimeout: 10000,
@@ -11,7 +14,10 @@ export default defineConfig({
     ],
     // We've imported your old cypress plugins here.
     // You may want to clean this up later by importing these.
-    setupNodeEvents(on, config) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setupNodeEvents(on: any, config) {
+      addCucumberPreprocessorPlugin.addCucumberPreprocessorPlugin(on, config);
+
       on("task", {
         log(args) {
           console.log(args);
@@ -24,10 +30,22 @@ export default defineConfig({
           return null;
         },
       });
+      on("file:preprocessor", (file) => {
+        if (file.filePath.endsWith(".feature")) {
+          return createBundler({
+            plugins: [createEsbuildPlugin(config)],
+          })(file);
+        }
+        // Use default preprocessor for other files
+        return undefined;
+      });
       return config;
     },
     baseUrl: "http://0.0.0.0:8400",
-    specPattern: "cypress/e2e/**/*.{js,jsx,ts,tsx}",
+    specPattern: [
+      "cypress/e2e/**/*.{js,jsx,ts,tsx}",
+      "cypress/e2e/**/*.feature",
+    ],
     viewportHeight: 1300,
     viewportWidth: 1440,
   },
