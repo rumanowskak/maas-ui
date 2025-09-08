@@ -31,13 +31,9 @@ export default defineConfig({
         },
       });
       on("file:preprocessor", (file) => {
-        if (file.filePath.endsWith(".feature")) {
-          return createBundler({
-            plugins: [createEsbuildPlugin(config)],
-          })(file);
-        }
-        // Use default preprocessor for other files
-        return undefined;
+        return createBundler({
+          plugins: [createEsbuildPlugin(config)],
+        })(file);
       });
       return config;
     },
