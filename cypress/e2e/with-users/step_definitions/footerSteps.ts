@@ -1,4 +1,4 @@
-import { Given, When, Then } from "@badeball/cypress-cucumber-preprocessor";
+import { Given, Then, When } from "@badeball/cypress-cucumber-preprocessor";
 import { generateMAASURL } from "../../utils";
 
 Given("the user is on the home page", () => {
@@ -9,8 +9,8 @@ When("the user looks for the {string} link", (linkName: string) => {
   cy.findByRole("link", { name: new RegExp(linkName, "i") }).as("element");
 });
 
-When("the user looks for the give feedback button", () => {
-  cy.findByRole("button", { name: /give feedback/i });
+When('the user looks for the "give feedback" button', () => {
+  cy.findByRole("button", { name: /give feedback/i }).as("element");
 });
 
 Then("the link should include {string}", (expectedHref) => {
