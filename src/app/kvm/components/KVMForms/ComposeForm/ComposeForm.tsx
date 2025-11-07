@@ -179,7 +179,7 @@ type Props = {
   hostId: Pod["id"];
 };
 
-// eslint-disable-next-line complexity
+/* eslint-disable complexity */
 const ComposeForm = ({
   clearSidePanelContent,
   hostId,
@@ -536,5 +536,6 @@ const ComposeForm = ({
     </Strip>
   );
 };
+/* eslint-enable complexity */
 
 export default ComposeForm;
