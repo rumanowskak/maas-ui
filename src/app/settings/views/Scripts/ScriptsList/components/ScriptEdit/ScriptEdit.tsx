@@ -1,67 +1,62 @@
-import type { ReactElement } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { NotificationSeverity, Row } from "@canonical/react-components";
+import {
+  Notification,
+  NotificationSeverity,
+  Row,
+} from "@canonical/react-components";
 import classNames from "classnames";
 import type { FileRejection, FileWithPath } from "react-dropzone";
 import { useDropzone } from "react-dropzone";
 import { useDispatch, useSelector } from "react-redux";
 
-import type { ReadScriptResponse } from "./readScript";
-import readScript from "./readScript";
+import type { ReadScriptResponse } from "../../../ScriptsUpload/readScript";
+import readScript from "../../../ScriptsUpload/readScript";
 
+import FormikField from "@/app/base/components/FormikField";
 import FormikForm from "@/app/base/components/FormikForm";
 import { useSidePanel } from "@/app/base/side-panel-context";
 import { messageActions } from "@/app/store/message";
+import type { RootState } from "@/app/store/root/types";
 import { scriptActions } from "@/app/store/script";
 import scriptSelectors from "@/app/store/script/selectors";
+import type { Script } from "@/app/store/script/types";
 import { ScriptType } from "@/app/store/script/types";
 
-type ScriptsUploadProps = {
-  type: "commissioning" | "deployment" | "switch" | "testing";
+type Props = {
+  id: Script["id"];
 };
 
 export enum Labels {
   FileUploadArea = "File upload area",
-  SubmitButton = "Upload script",
+  DescriptionField = "Description",
+  SubmitButton = "Edit script",
 }
 
-const ScriptsUpload = ({ type }: ScriptsUploadProps): ReactElement => {
+const ScriptEdit = ({ id }: Props): React.ReactElement | null => {
   const MAX_SIZE_BYTES = 2000000; // 2MB
-  const hasErrors = useSelector(scriptSelectors.hasErrors);
+  const dispatch = useDispatch();
+  const { closeSidePanel } = useSidePanel();
   const errors = useSelector(scriptSelectors.errors);
   const saved = useSelector(scriptSelectors.saved);
   const saving = useSelector(scriptSelectors.saving);
-  const [savedScript, setSavedScript] = useState<string | null>(null);
-  const [script, setScript] = useState<ReadScriptResponse | null>(null);
-  const dispatch = useDispatch();
-  const { closeSidePanel } = useSidePanel();
-
-  useEffect(() => {
-    if (hasErrors && errors && typeof errors === "object") {
-      Object.values(errors).forEach((error) => {
-        dispatch(
-          messageActions.add(
-            `Error uploading ${savedScript}: ${error}`,
-            NotificationSeverity.NEGATIVE
-          )
-        );
-      });
-      dispatch(scriptActions.cleanup());
-    }
-  }, [savedScript, hasErrors, errors, dispatch]);
+  const hasErrors = useSelector(scriptSelectors.hasErrors);
+  const script = useSelector((state: RootState) =>
+    scriptSelectors.getById(state, id)
+  );
+  const [newScript, setNewScript] = useState<ReadScriptResponse | null>(null);
+  const [savedName, setSavedName] = useState<string | null>(null);
 
   const onDrop = useCallback(
     (acceptedFiles: FileWithPath[], fileRejections: FileRejection[]) => {
-      let tooManyFiles = false; // only display 'too-many-files' error once.
+      let tooManyFiles = false;
       fileRejections.forEach((rejection) => {
         rejection.errors.forEach((error) => {
-          // override error message for 'too-many-files' as we prefer ours.
           if (error.code === "too-many-files") {
             if (!tooManyFiles) {
               dispatch(
                 messageActions.add(
-                  `Only a single file may be uploaded.`,
+                  "Only a single file may be uploaded.",
                   NotificationSeverity.NEGATIVE
                 )
               );
@@ -69,7 +64,6 @@ const ScriptsUpload = ({ type }: ScriptsUploadProps): ReactElement => {
             tooManyFiles = true;
             return;
           }
-          // handle all other errors
           dispatch(
             messageActions.add(
               `${rejection.file.name}: ${error.message}`,
@@ -80,7 +74,7 @@ const ScriptsUpload = ({ type }: ScriptsUploadProps): ReactElement => {
       });
 
       if (!fileRejections.length && acceptedFiles.length) {
-        readScript(acceptedFiles[0], dispatch, setScript);
+        readScript(acceptedFiles[0], dispatch, setNewScript);
       }
     },
     [dispatch]
@@ -100,23 +94,43 @@ const ScriptsUpload = ({ type }: ScriptsUploadProps): ReactElement => {
   });
 
   useEffect(() => {
+    if (hasErrors && errors && typeof errors === "object") {
+      Object.values(errors).forEach((error) => {
+        dispatch(
+          messageActions.add(
+            `Error saving ${savedName}: ${error}`,
+            NotificationSeverity.NEGATIVE
+          )
+        );
+      });
+      dispatch(scriptActions.cleanup());
+    }
+  }, [savedName, hasErrors, errors, dispatch]);
+
+  useEffect(() => {
     if (saved) {
       dispatch(scriptActions.cleanup());
       dispatch(
         messageActions.add(
-          `${savedScript} uploaded successfully.`,
+          `${savedName} saved successfully.`,
           NotificationSeverity.INFORMATION
         )
       );
-      setSavedScript(null);
+      setSavedName(null);
     }
-  }, [dispatch, saved, savedScript]);
+  }, [dispatch, saved, savedName]);
 
+  if (!script) {
+    return null;
+  }
+
+  const hasFile = acceptedFiles.length > 0;
   const uploadedFile: FileWithPath = acceptedFiles[0];
 
   return (
     <div className="u-nudge-down">
       <Row>
+        <p className="u-no-margin--bottom">ZTP script</p>
         <div
           {...getRootProps()}
           className={classNames("scripts-upload", {
@@ -135,48 +149,58 @@ const ScriptsUpload = ({ type }: ScriptsUploadProps): ReactElement => {
             </p>
           )}
         </div>
+        {uploadedFile ? (
+          <p className="u-no-margin--top">
+            {`${uploadedFile.path} (${uploadedFile.size} bytes) ready for upload.`}
+          </p>
+        ) : null}
+        {hasFile ? (
+          <p className="u-text--muted">
+            Uploading a new script will update the edited script to the new one.
+            Doing so will disable changing description of original script as it
+            will no longer exist.
+          </p>
+        ) : null}
       </Row>
       <Row>
         <FormikForm
-          initialValues={{}}
+          initialValues={{ description: script.description }}
           onCancel={closeSidePanel}
-          onSubmit={() => {
+          onSubmit={({ description }) => {
             dispatch(scriptActions.cleanup());
-            if (script?.script) {
-              const scriptType =
-                type === "commissioning"
-                  ? ScriptType.COMMISSIONING
-                  : type === "testing"
-                    ? ScriptType.TESTING
-                    : type === "switch"
-                      ? ScriptType.SWITCH
-                      : ScriptType.DEPLOYMENT;
-              if (script.hasMetadata) {
-                // we allow the API to parse the script name from the metadata header
-                dispatch(scriptActions.upload(scriptType, script.script));
-              } else {
-                dispatch(
-                  scriptActions.upload(scriptType, script.script, script.name)
-                );
-              }
-              setSavedScript(script.name);
+            if (hasFile && newScript?.script) {
+              dispatch(
+                scriptActions.upload(
+                  ScriptType.SWITCH,
+                  newScript.script,
+                  newScript.name
+                )
+              );
+              setSavedName(newScript.name ?? script.name);
+            } else {
+              dispatch(scriptActions.update({ id, description }));
+              setSavedName(script.name);
             }
           }}
           onSuccess={closeSidePanel}
           saved={saved}
           saving={saving}
-          submitDisabled={acceptedFiles.length === 0}
           submitLabel={Labels.SubmitButton}
         >
-          {uploadedFile ? (
-            <p>
-              {`${uploadedFile.path} (${uploadedFile.size} bytes) ready for upload.`}
-            </p>
-          ) : null}
+          <FormikField
+            disabled={hasFile}
+            label={Labels.DescriptionField}
+            name="description"
+            type="text"
+          />
+          <Notification severity="caution" title="">
+            Changing this script will not affect switches that have already been
+            deployed with it.
+          </Notification>
         </FormikForm>
       </Row>
     </div>
   );
 };
 
-export default ScriptsUpload;
+export default ScriptEdit;

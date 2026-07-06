@@ -34,3 +34,8 @@ export type Script = TimestampedModel & {
 };
 
 export type ScriptState = GenericState<Script, APIError>;
+
+export type ScriptUpdateParams = {
+  id: Script["id"];
+  description: string;
+};

@@ -1,8 +1,8 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 
+import type { Script, ScriptState, ScriptUpdateParams } from "./types";
 import { ScriptMeta } from "./types";
-import type { Script, ScriptState } from "./types";
 
 import {
   generateCommonReducers,
@@ -13,7 +13,12 @@ const scriptSlice = createSlice({
   name: ScriptMeta.MODEL,
   initialState: genericInitialState as ScriptState,
   reducers: {
-    ...generateCommonReducers<ScriptState, ScriptMeta.PK, void, void>({
+    ...generateCommonReducers<
+      ScriptState,
+      ScriptMeta.PK,
+      void,
+      ScriptUpdateParams
+    >({
       modelName: ScriptMeta.MODEL,
       primaryKey: ScriptMeta.PK,
     }),

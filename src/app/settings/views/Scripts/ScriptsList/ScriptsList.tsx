@@ -70,17 +70,13 @@ const ScriptsList = ({ type = "commissioning" }: Props): React.ReactElement => {
               />
               <Button
                 disabled={!canEdit}
-                onClick={
-                  type !== "switch"
-                    ? () => {
-                        openSidePanel({
-                          component: ScriptsUpload,
-                          title: `Upload ${type} script`,
-                          props: { type },
-                        });
-                      }
-                    : undefined
-                }
+                onClick={() => {
+                  openSidePanel({
+                    component: ScriptsUpload,
+                    title: `Upload ${type} script`,
+                    props: { type },
+                  });
+                }}
               >
                 Upload script
               </Button>

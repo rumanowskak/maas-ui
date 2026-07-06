@@ -4,6 +4,7 @@ export type {
   ScriptsPackages,
   ScriptsParameters,
   ScriptsResults,
+  ScriptUpdateParams,
 } from "./base";
 
 export { ScriptMeta, ScriptName, ScriptType } from "./enum";

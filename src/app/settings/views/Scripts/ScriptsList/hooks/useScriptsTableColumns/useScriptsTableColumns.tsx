@@ -4,6 +4,7 @@ import { Button } from "@canonical/react-components";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import DeleteScript from "../../components/DeleteScript";
+import ScriptEdit from "../../components/ScriptEdit";
 
 import TableActions from "@/app/base/components/TableActions";
 import { useSidePanel } from "@/app/base/side-panel-context";
@@ -87,7 +88,17 @@ const useScriptsTableColumns = ({
                 props: { id: row.original.id },
               });
             }}
-            onEdit={type === "switch" ? () => {} : undefined}
+            onEdit={
+              type === "switch"
+                ? () => {
+                    openSidePanel({
+                      component: ScriptEdit,
+                      title: "Edit script",
+                      props: { id: row.original.id },
+                    });
+                  }
+                : undefined
+            }
           />
         ),
       },
